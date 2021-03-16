@@ -23,7 +23,7 @@
 +(void)wakeScene:(FBScene *)scene {
   [scene _setContentState:2]; // 2 == ready, 1 == preparing, 0 == not ready
   FBSMutableSceneSettings *sceneSettings = scene.mutableSettings;
-  [sceneSettings setForeground:YES]; // This is importent for the view to be interactable.
+  [sceneSettings setForeground:YES]; // This is important for the view to be interactable.
   [scene updateSettings:sceneSettings withTransitionContext:nil]; // Enact the changes made
 }
 
