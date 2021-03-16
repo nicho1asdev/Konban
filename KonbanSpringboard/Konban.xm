@@ -44,9 +44,8 @@
 +(id)createLayerHostView:(NSString *)bundleID { // This is the new implementation to get the view instead of getting it via a FBSceneHostManager which was the old way.
   SBApplication *app = [Konban app:bundleID];
   FBScene *scene = [Konban getMainSceneForApp:app];
-  FBSceneLayerManager *layerManager = scene.layerManager;
-  FBSceneLayer *sceneLayer = [layerManager.layers allObjects][0];
-  _UIContextLayerHostView *layerHostView = [[%c(_UIContextLayerHostView) alloc] initWithSceneLayer:sceneLayer];
+  _UISceneLayerHostContainerView *layerHostView=[[objc_getClass("_UISceneLayerHostContainerView") alloc] initWithScene:scene];
+  [layerHostView _setPresentationContext:[[objc_getClass("UIScenePresentationContext") alloc] _initWithDefaultValues]];
   return layerHostView;
 }
 
