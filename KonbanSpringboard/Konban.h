@@ -17,6 +17,15 @@
 - (id)initWithSceneLayer:(id)arg1;
 @end
 
+@interface _UISceneLayerHostContainerView : UIView
+- (id)initWithScene:(id)arg1;
+- (void)_setPresentationContext:(id)arg1;
+@end
+
+@interface UIScenePresentationContext : NSObject
+- (id)_initWithDefaultValues;
+@end
+
 @interface FBSceneLayer : NSObject
 @end
 
