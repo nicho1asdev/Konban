@@ -13,6 +13,7 @@ BOOL enabled;
 BOOL enabledCoverSheet;
 BOOL enabledHomeScreen;
 BOOL hideStatusBar;
+BOOL useInNC = true;
 CGFloat scale = 0.8;
 CGFloat cornerRadius = 16;
 NSString *bundleID = @"com.apple.calculator";
@@ -23,7 +24,7 @@ CGRect insetByPercent(CGRect f, CGFloat s) {
     return CGRectMake(f.origin.x + f.size.width * originScale, f.origin.y + f.size.height * originScale, f.size.width * s, f.size.height * s);
 }
 
-%group Konban
+%group iOS13
 
 %hook SBHomeScreenTodayViewController
 
@@ -133,6 +134,101 @@ CGRect insetByPercent(CGRect f, CGFloat s) {
 
 %end
 
+%group iOS14
+
+%hook SBTodayViewController
+
+%property (nonatomic, retain) UIView *konHostView;
+%property (nonatomic, retain) UIActivityIndicatorView *konSpinnerView;
+%property (nonatomic, retain) UIStackView *konFavStackView;
+
+-(void)viewWillAppear:(bool)arg1 {
+    %orig;
+
+    [self.konSpinnerView stopAnimating];
+    [self.konSpinnerView removeFromSuperview];
+    [self.konHostView removeFromSuperview];
+
+     SBLockStateAggregator *lockStateAggregator = [%c(SBLockStateAggregator) sharedInstance];
+     if ((MSHookIvar<NSUInteger>(lockStateAggregator, "_lockState") != 0 || self.view.tag == 5)) {
+       if (!useInNC && MSHookIvar<NSUInteger>(lockStateAggregator, "_lockState") == 1) {
+         for (UIView *view in [self.view subviews]) {
+           view.hidden = NO;
+         }
+        return;
+      }
+    }
+    else if (!enabled) return;
+
+    if (enabled) {
+        for (UIView *view in [self.view subviews]) {
+            view.hidden = YES;
+        }
+
+        if (!self.konSpinnerView) self.konSpinnerView = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleWhiteLarge];
+        self.konSpinnerView.hidesWhenStopped = YES;
+        self.konSpinnerView.frame = self.view.frame;
+        [self.view addSubview:self.konSpinnerView];
+        [self.konSpinnerView startAnimating];
+
+        visible = YES;
+        @try {
+        [Konban launch:bundleID];
+        self.konHostView = [Konban viewFor:bundleID]; //prevent crashes by putting it in a try-catch block. While the app is loading, the FBSceneLayer will return nil, which will cause a crash.
+        }
+        @catch (NSException *exception){
+          if (exception) {
+            %log(@"konView ERROR:%@", exception);
+          }
+        }
+        %log(@"[konban] konHostView: %@", self.konHostView);
+        self.konHostView.alpha = 0;
+        self.konHostView.frame = self.view.frame;
+        self.konHostView.transform = CGAffineTransformMakeScale(scale, scale);
+        self.konHostView.layer.cornerRadius = cornerRadius;
+        self.konHostView.layer.masksToBounds = true;
+        [self.view addSubview:self.konHostView];
+        [self.view bringSubviewToFront:self.konHostView];
+        self.konHostView.hidden = NO;
+        [UIView animateWithDuration:0.3 animations:^{
+          self.konHostView.alpha = 1;
+        }];
+        CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), (CFStringRef)@"me.nepeta.konban/StatusBarHide", nil, nil, true);
+
+        if (!self.konHostView) { // loop through these steps until the application is launched and our view is returned.
+            [self.konSpinnerView startAnimating];
+            [self.view bringSubviewToFront:self.konSpinnerView];
+
+            [self performSelector:@selector(viewWillAppear:) withObject:nil afterDelay:0.5];
+        }
+    } else {
+        for (UIView *view in [self.view subviews]) {
+            view.hidden = NO;
+        }
+
+        if (self.konHostView) {
+            [self.konHostView removeFromSuperview];
+            [Konban dehost:bundleID];
+            self.konHostView = nil;
+        }
+    }
+}
+
+-(void)viewDidDisappear:(bool)arg1 {
+    %orig;
+    CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), (CFStringRef)@"me.nepeta.konban/StatusBarShow", nil, nil, true);
+
+    visible = NO;
+    if (!self.konHostView) return;
+    [self.konHostView removeFromSuperview];
+    [Konban dehost:bundleID];
+    self.konHostView = nil;
+}
+
+%end
+
+%end
+
 void changeApp() {
     NSMutableDictionary *appList = [[NSMutableDictionary alloc] initWithContentsOfFile:@"/var/mobile/Library/Preferences/me.nepeta.konban-app.plist"];
     if (!appList) return;
@@ -148,11 +244,19 @@ void changeApp() {
     [preferences registerFloat:&cornerRadius default:16 forKey:@"CornerRadius"];
     [preferences registerFloat:&scale default:0.8 forKey:@"Scale"];
     [preferences registerBool:&hideStatusBar default:YES forKey:@"HideStatusBar"];
+    [preferences registerBool:&useInNC default:YES forKey:@"useInNotificationCenter"];
     dpkgInvalid = ![[NSFileManager defaultManager] fileExistsAtPath:@"/var/lib/dpkg/info/com.nicho1asdev.konban.list"];
 
     if (dpkgInvalid) %init(dpkgInvalid);
 
+    if (!enabled) return;
+
     changeApp();
     CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (CFNotificationCallback)changeApp, (CFStringRef)@"me.nepeta.konban/ReloadApp", NULL, (CFNotificationSuspensionBehavior)kNilOptions);
-    %init(Konban);
+    if (@available(iOS 14.0, *)) {
+      %init(iOS14);
+    }
+    else {
+      %init(iOS13);
+    }
 }

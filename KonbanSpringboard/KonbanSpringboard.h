@@ -27,6 +27,16 @@
 
 @end
 
+@interface SBTodayViewController : UIViewController
+
+@property (nonatomic, retain) UIView *konHostView;
+@property (nonatomic, retain) UIActivityIndicatorView *konSpinnerView;
+@property (nonatomic, retain) UIStackView *konFavStackView;
+
+- (void)setupFavoritesView;
+
+@end
+
 @interface CSTodayContentViewController : UIViewController
 
 @property (nonatomic, retain) UIView *konHostView;

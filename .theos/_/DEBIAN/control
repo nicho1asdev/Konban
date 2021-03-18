@@ -2,10 +2,11 @@ Package: com.nicho1asdev.konban
 Name: Konban
 Depends: mobilesubstrate, ws.hbang.common (>= 1.11), applist, firmware (>= 13.0)
 Conflicts: me.nepeta.konban
-Version: 0.3.1
 Architecture: iphoneos-arm
 Description: Replaces the "Today" view with an app of your choice. Rewritten for iOS 13 and 14 by nicho1asdev.
 Maintainer: nicho1asdev
 Author: nicho1asdev, Nepeta
 Depiction: https://nicho1asdev.github.io/repo/depictions/?p=com.nicho1asdev.konban
 Section: Tweaks
+Version: 0.3.1
+Installed-Size: 492
